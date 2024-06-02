@@ -103,6 +103,7 @@ extension UITextField {
         self.textColor = .white
         self.attributedPlaceholder = NSAttributedString(string: placeholder, attributes: [NSAttributedString.Key.foregroundColor : UIColor.lightGray])
         self.isSecureTextEntry = isSecureTextEntry
+        self.autocapitalizationType = .none
         
         return self
     }
@@ -121,3 +122,44 @@ extension UIColor {
     static let backgroundColor = UIColor.rgb(red: 25, green: 25, blue: 25)
     static let mainBlueTint = UIColor.rgb(red: 17, green: 154, blue: 237)
 }
+
+
+
+
+
+
+extension UIApplication {
+    
+    func topViewController() -> UIViewController? {
+        var topViewController: UIViewController? = nil
+        
+        if #available(iOS 13, *) {
+            for scene in connectedScenes {
+                if let windowScene = scene as? UIWindowScene {
+                    for window in windowScene.windows {
+                        if window.isKeyWindow {
+                            topViewController = window.rootViewController
+                        }
+                    }
+                }
+            }
+        } else {
+            topViewController = keyWindow?.rootViewController
+        }
+        
+        while true {
+            if let presented = topViewController?.presentedViewController {
+                topViewController = presented
+            } else if let navController = topViewController as? UINavigationController {
+                topViewController = navController.topViewController
+            } else if let tabBarController = topViewController as? UITabBarController {
+                topViewController = tabBarController.selectedViewController
+            } else {
+                // Handle any other third party container in `else if` if required
+                break
+            }
+        }
+        return topViewController
+    }
+}
+

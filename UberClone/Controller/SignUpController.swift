@@ -5,6 +5,7 @@
 
 
 import UIKit
+import Firebase
 
 
 class SignUpController: UIViewController {
@@ -54,16 +55,16 @@ class SignUpController: UIViewController {
         return sc
     }()
     
-    private let signUpBtn: AuthButton = {
+    private lazy var signUpBtn: AuthButton = {
         let button = AuthButton(type: .system)
         button.setTitle("Sign Up", for: .normal)
-        
+        button.addTarget(self, action: #selector(handleSignUp), for: .touchUpInside)
         button.heightAnchor.constraint(equalToConstant: 50).isActive = true
         return button
     }()
     
     
-    private let alreadyHaveAccountBtn: UIButton = {
+    private lazy var alreadyHaveAccountBtn: UIButton = {
         let button = UIButton(type: .system)
         
         let attributedTitle = NSMutableAttributedString(string: "Already have an account ?   ",
@@ -116,5 +117,35 @@ class SignUpController: UIViewController {
     
     @objc func handleShowLogin() {
         navigationController?.popViewController(animated: true)
+    }
+    
+    @objc func handleSignUp() {
+        guard let email = emailTextField.text else { return }
+        guard let password = passwordTextField.text else { return }
+        guard let fullName = fullNameTextField.text else { return }
+        let accountTypeIndex = accountTypeSegmentedCtrl.selectedSegmentIndex
+        
+        
+        Auth.auth().createUser(withEmail: email, password: password) { result, error in
+            if let error = error {
+                print("Failed to register user with error \(error.localizedDescription)")
+                return
+            }
+            
+            guard let uid = result?.user.uid else { return }
+            
+            // create dictionary to upload on Firebase database
+            let values = ["email": email, "fullName": fullName, "accountType": accountTypeIndex]
+            
+            Database.database().reference().child("users").child(uid).updateChildValues(values) { error, ref in
+                DispatchQueue.main.async {
+                    guard let topController = UIApplication.shared.topViewController() as? HomeController else { return }
+                    topController.configureUI()
+                }
+                
+                // Because in case of No Login we are presenting Login screen over Home screen. So, when user logs in successfully we dismiss the Login screen. Similar logic with Sign up screen.
+                self.dismiss(animated: true, completion: nil)
+            }
+        }
     }
 }

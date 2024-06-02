@@ -6,6 +6,8 @@
 //
 
 import UIKit
+import Firebase
+
 
 class LoginController: UIViewController {
     // MARK: - Properties
@@ -37,16 +39,16 @@ class LoginController: UIViewController {
     }()
     
     
-    private let loginBtn: AuthButton = {
+    private lazy var loginBtn: AuthButton = {
         let button = AuthButton(type: .system)
         button.setTitle("Log In", for: .normal)
-        
+        button.addTarget(self, action: #selector(handleLogin), for: .touchUpInside)
         button.heightAnchor.constraint(equalToConstant: 50).isActive = true
         return button
     }()
     
     
-    private let dontHaveAccountBtn: UIButton = {
+    private lazy var dontHaveAccountBtn: UIButton = {
         let button = UIButton(type: .system)
         
         let attributedTitle = NSMutableAttributedString(string: "Don't have an account ?   ",
@@ -74,6 +76,25 @@ class LoginController: UIViewController {
         navigationController?.pushViewController(controller, animated: true)
     }
     
+    @objc func handleLogin() {
+        guard let email = emailTextField.text else { return }
+        guard let password = passwordTextField.text else { return }
+        
+        Auth.auth().signIn(withEmail: email, password: password) { result, error in
+            if let error = error {
+                print("Failed to log user in with error \(error.localizedDescription)")
+                return
+            }
+            
+            DispatchQueue.main.async {
+                guard let topController = UIApplication.shared.topViewController() as? HomeController else { return }
+                topController.configureUI()
+            }
+            
+            // Because in case of No Login we are presenting Login screen over Home screen. So, when user logs in successfully we dismiss the Login screen. Similar logic with Sign up screen.
+            self.dismiss(animated: true, completion: nil)
+        }
+    }
     
     func configureUI() {
         configureNavigationBar()
