@@ -14,6 +14,7 @@ class HomeController: UIViewController {
     private let mapView = MKMapView()
     private let locationManager = CLLocationManager()
     private let inputActivationView = LocationInputActivationView()
+    private let locationInputView = LocationInputView()
     
     
     override func viewDidLoad() {
@@ -72,6 +73,20 @@ class HomeController: UIViewController {
         mapView.showsUserLocation = true
         mapView.userTrackingMode = .follow
     }
+    
+    func configureLocationInputView() {
+        view.addSubview(locationInputView)
+        locationInputView.delegate = self
+        locationInputView.setConstraints(top: view.topAnchor, left: view.leftAnchor, right: view.rightAnchor,
+                            height: 200)
+        
+        locationInputView.alpha = 0
+        UIView.animate(withDuration: 0.5, animations: {
+            self.locationInputView.alpha = 1
+        }) { _ in
+            print("DEBUG: Present table view")
+        }
+    }
 }
 
 
@@ -119,6 +134,21 @@ extension HomeController: CLLocationManagerDelegate {
 extension HomeController: LocationInputActivationViewDelegate {
     
     func presentLocationInputView() {
-        print("DEBUG: Present Location input view")
+        inputActivationView.alpha = 0  // Hide the view before showing LocationInputView
+        configureLocationInputView()
+    }
+}
+
+
+
+
+extension HomeController: LocationInputViewDelegate {
+    
+    func dismissLocationInputView() {
+        UIView.animate(withDuration: 0.3) {
+            self.locationInputView.alpha = 0
+        } completion: { _ in
+            self.inputActivationView.alpha = 1
+        }
     }
 }
