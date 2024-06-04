@@ -2,22 +2,44 @@
 //  LocationCell.swift
 //  UberClone
 //
-//  Created by Saqib Bhatti on 3/6/24.
-//
+
 
 import UIKit
 
+
 class LocationCell: UITableViewCell {
-
-    override func awakeFromNib() {
-        super.awakeFromNib()
-        // Initialization code
+    // MARK: - Properties
+    private let titleLabel: UILabel = {
+        let label = UILabel()
+        label.text = "123 Main street"
+        label.font = UIFont.systemFont(ofSize: 14)
+        return label
+    }()
+    
+    private let addressLabel: UILabel = {
+        let label = UILabel()
+        label.text = "123 Main street, Washington DC"
+        label.font = UIFont.systemFont(ofSize: 14)
+        label.textColor = .lightGray
+        return label
+    }()
+    
+    
+    override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
+        super.init(style: style, reuseIdentifier: reuseIdentifier)
+        
+        self.selectionStyle = .none
+        
+        let stack = UIStackView(arrangedSubviews: [titleLabel, addressLabel])
+        stack.axis = .vertical
+        stack.distribution = .fillEqually
+        stack.spacing = 4
+        
+        addSubview(stack)
+        stack.centerY(inView: self, leftAnchor: self.leftAnchor, paddingLeft: 12)
     }
-
-    override func setSelected(_ selected: Bool, animated: Bool) {
-        super.setSelected(selected, animated: animated)
-
-        // Configure the view for the selected state
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
     }
-
 }
