@@ -66,6 +66,11 @@ class LocationInputView: UIView {
     
     
     // MARK: - Properties
+    var user: User? {
+        didSet {
+            titleLabel.text = user?.fullName  // set the title as soon as User Model gets populated
+        }
+    }
     weak var delegate: LocationInputViewDelegate?
     
     
@@ -79,7 +84,6 @@ class LocationInputView: UIView {
     
     private let titleLabel: UILabel = {
         let label = UILabel()
-        label.text = "SAQIB"
         label.font = UIFont.systemFont(ofSize: 16)
         label.textColor = .darkGray
         return label

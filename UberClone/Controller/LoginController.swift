@@ -87,8 +87,10 @@ class LoginController: UIViewController {
             }
             
             DispatchQueue.main.async {
-                guard let topController = UIApplication.shared.topViewController() as? HomeController else { return }
-                topController.configureUI()
+                let keyWindow = UIApplication.shared.windows.filter {$0.isKeyWindow}.first
+                if let homeController = keyWindow?.rootViewController as? HomeController {
+                    homeController.configureUI()
+                }
             }
             
             // Because in case of No Login we are presenting Login screen over Home screen. So, when user logs in successfully we dismiss the Login screen. Similar logic with Sign up screen.

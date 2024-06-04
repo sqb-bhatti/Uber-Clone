@@ -16,11 +16,16 @@ private let reuseIdentifier = "LocationCell"
 class HomeController: UIViewController {
     // MARK: - Properties
     private let mapView = MKMapView()
-    private let locationManager = CLLocationManager()
+    private let locationManager = LocationsHandler.shared.locationManager
     private let inputActivationView = LocationInputActivationView()
     private let locationInputView = LocationInputView()
     private let tableView = UITableView()
     private final let locationInputViewHeight: CGFloat = 200
+    private var user: User? {
+        didSet {
+            locationInputView.user = user
+        }
+    }
     
     
     override func viewDidLoad() {
@@ -28,8 +33,9 @@ class HomeController: UIViewController {
         
         view.backgroundColor = .blue
         checkIfUserLoggedIn()
-//        signOut()
         enableLocationServices()
+        fetchUserData()
+//        signOut()
     }
     
     
@@ -49,6 +55,11 @@ class HomeController: UIViewController {
     func signOut() {
         do {
             try Auth.auth().signOut()
+            DispatchQueue.main.async {
+                let nav = UINavigationController(rootViewController: LoginController())
+                nav.modalPresentationStyle = .fullScreen
+                self.present(nav, animated: true)
+            }
         } catch {
             print("Error Signing out")
         }
@@ -111,6 +122,13 @@ class HomeController: UIViewController {
         
         view.addSubview(tableView)
     }
+    
+    // MARK: - Firebase API
+    func fetchUserData() {
+        Service.shared.fetchUserData { user in
+            self.user = user
+        }
+    }
 }
 
 
@@ -119,32 +137,24 @@ class HomeController: UIViewController {
 
 
 // MARK: - Location Services
-extension HomeController: CLLocationManagerDelegate {
+extension HomeController {
 
-    func locationManagerDidChangeAuthorization(_ manager: CLLocationManager,
-                                               didChangeAuthorization status: CLAuthorizationStatus) {
-        if status == .authorizedWhenInUse {
-            locationManager.requestAlwaysAuthorization()
-        }
-    }
-    
-    
     func enableLocationServices() {
-        locationManager.delegate = self
+//        locationManager?.delegate = self
         
         switch CLLocationManager.authorizationStatus() {
         case .notDetermined:
             print("DEBUG: Not Determined")
-            locationManager.requestWhenInUseAuthorization()
+            locationManager?.requestWhenInUseAuthorization()
         case .restricted, .denied:
             break
         case .authorizedAlways:
             print("DEBUG: Authorize always")
-            locationManager.startUpdatingLocation()
-            locationManager.desiredAccuracy = kCLLocationAccuracyBest
+            locationManager?.startUpdatingLocation()
+            locationManager?.desiredAccuracy = kCLLocationAccuracyBest
         case .authorizedWhenInUse:
             print("DEBUG: Auth when in use")
-            locationManager.requestAlwaysAuthorization()
+            locationManager?.requestAlwaysAuthorization()
         @unknown default:
             break
         }

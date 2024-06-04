@@ -6,6 +6,7 @@
 
 import UIKit
 import Firebase
+import GeoFire
 
 
 class SignUpController: UIViewController {
@@ -82,6 +83,8 @@ class SignUpController: UIViewController {
         super.viewDidLoad()
         
         configureUI()
+        let sharedLocationManager = LocationsHandler.shared.locationManager
+        print("DEBUG: Location is \(sharedLocationManager?.location)")
     }
     
     
@@ -137,10 +140,23 @@ class SignUpController: UIViewController {
             // create dictionary to upload on Firebase database
             let values = ["email": email, "fullName": fullName, "accountType": accountTypeIndex]
             
-            Database.database().reference().child("users").child(uid).updateChildValues(values) { error, ref in
+            // If the user is a driver
+            if accountTypeIndex == 1 {
+                // Get reference to driver locations in firebase database
+                var geofire = GeoFire(firebaseRef: REF_DRIVER_LOCATIONS)
+                let sharedLocationManager = LocationsHandler.shared.locationManager
+//                geofire.setLocation(<#T##location: CLLocation##CLLocation#>, forKey: uid) { (error) in
+//                    // do stuff
+//                }
+            }
+            
+            
+            REF_USERS.child(uid).updateChildValues(values) { error, ref in
                 DispatchQueue.main.async {
-                    guard let topController = UIApplication.shared.topViewController() as? HomeController else { return }
-                    topController.configureUI()
+                    let keyWindow = UIApplication.shared.windows.filter {$0.isKeyWindow}.first
+                    if let homeController = keyWindow?.rootViewController as? HomeController {
+                        homeController.configureUI()
+                    }
                 }
                 
                 // Because in case of No Login we are presenting Login screen over Home screen. So, when user logs in successfully we dismiss the Login screen. Similar logic with Sign up screen.
