@@ -10,6 +10,7 @@ import MapKit
 
 
 private let reuseIdentifier = "LocationCell"
+private let annotationIdentifier = "DriverAnnotation"
 
 
 
@@ -35,6 +36,7 @@ class HomeController: UIViewController {
         checkIfUserLoggedIn()
         enableLocationServices()
         fetchUserData()
+        fetchDrivers()
 //        signOut()
     }
     
@@ -91,6 +93,7 @@ class HomeController: UIViewController {
         
         mapView.showsUserLocation = true
         mapView.userTrackingMode = .follow
+        mapView.delegate = self
     }
     
     func configureLocationInputView() {
@@ -125,8 +128,35 @@ class HomeController: UIViewController {
     
     // MARK: - Firebase API
     func fetchUserData() {
-        Service.shared.fetchUserData { user in
+        guard let currentUid = Auth.auth().currentUser?.uid else { return }
+        Service.shared.fetchUserData(uid: currentUid) { user in
             self.user = user
+        }
+    }
+    
+    func fetchDrivers() {
+        guard let location = locationManager?.location else { return }
+        Service.shared.fetchDrivers(location: location) { (driver) in
+            guard let coordinate = driver.location?.coordinate else { return }
+            let annotation = DriverAnnotation(coordinate: coordinate, uid: driver.uid)
+            print("DEBUG: Driver Coordinate is \(coordinate)")
+            
+            var driverIsVisible: Bool {
+                return self.mapView.annotations.contains(where: { annotation -> Bool in
+                    guard let driverAnno = annotation as? DriverAnnotation else { return false }
+                    
+                    if driverAnno.uid == driver.uid {  // means driver is already visible on map. Update Annotation mark on Map with animation
+                        driverAnno.updateAnnotationPosition(withCordinate: coordinate)
+                        return true
+                    }
+                    return false
+                })
+            }
+            
+            if !driverIsVisible {
+                //Add the above annotation to MapView
+                self.mapView.addAnnotation(annotation)
+            }
         }
     }
 }
@@ -160,6 +190,25 @@ extension HomeController {
         }
     }
 }
+
+
+
+
+
+// MARK: - MKMapView Delegate
+extension HomeController: MKMapViewDelegate {
+    
+    func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
+        if let annotation = annotation as? DriverAnnotation {
+            let view = MKAnnotationView(annotation: annotation, reuseIdentifier: annotationIdentifier)
+            view.image = UIImage(named: "chevron-sign-to-right")
+            return view
+        }
+        
+        return nil
+    }
+}
+
 
 
 

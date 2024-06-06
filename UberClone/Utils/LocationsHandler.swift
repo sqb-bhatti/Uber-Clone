@@ -29,4 +29,8 @@ class LocationsHandler: NSObject, CLLocationManagerDelegate {
             locationManager.requestAlwaysAuthorization()
         }
     }
+    
+//    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+//        print("DEBUG: locations \(locations)")
+//    }
 }

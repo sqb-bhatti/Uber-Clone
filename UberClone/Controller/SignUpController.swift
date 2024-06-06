@@ -11,6 +11,8 @@ import GeoFire
 
 class SignUpController: UIViewController {
     // MARK: - Properties
+    private var location = LocationsHandler.shared.locationManager.location
+    
     private let titleLabel: UILabel = {
         let label = UILabel()
         label.text = "UBER"
@@ -83,8 +85,8 @@ class SignUpController: UIViewController {
         super.viewDidLoad()
         
         configureUI()
-        let sharedLocationManager = LocationsHandler.shared.locationManager
-        print("DEBUG: Location is \(sharedLocationManager?.location)")
+        
+        print("DEBUG: Location is \(location)")
     }
     
     
@@ -142,26 +144,29 @@ class SignUpController: UIViewController {
             
             // If the user is a driver
             if accountTypeIndex == 1 {
-                // Get reference to driver locations in firebase database
-                var geofire = GeoFire(firebaseRef: REF_DRIVER_LOCATIONS)
-                let sharedLocationManager = LocationsHandler.shared.locationManager
-//                geofire.setLocation(<#T##location: CLLocation##CLLocation#>, forKey: uid) { (error) in
-//                    // do stuff
-//                }
-            }
-            
-            
-            REF_USERS.child(uid).updateChildValues(values) { error, ref in
-                DispatchQueue.main.async {
-                    let keyWindow = UIApplication.shared.windows.filter {$0.isKeyWindow}.first
-                    if let homeController = keyWindow?.rootViewController as? HomeController {
-                        homeController.configureUI()
-                    }
-                }
+                let geofire = GeoFire(firebaseRef: REF_DRIVER_LOCATIONS)
                 
-                // Because in case of No Login we are presenting Login screen over Home screen. So, when user logs in successfully we dismiss the Login screen. Similar logic with Sign up screen.
-                self.dismiss(animated: true, completion: nil)
+                guard let location = self.location else { return }
+                geofire.setLocation(location, forKey: uid, withCompletionBlock: { (error) in
+                    self.uploadUserDataAndShowHomeVC(uid: uid, values: values)
+                })
             }
+            self.uploadUserDataAndShowHomeVC(uid: uid, values: values)
+        }
+    }
+    
+    
+    func uploadUserDataAndShowHomeVC(uid: String, values: [String: Any]) {
+        REF_USERS.child(uid).updateChildValues(values) { error, ref in
+            DispatchQueue.main.async {
+                let keyWindow = UIApplication.shared.windows.filter {$0.isKeyWindow}.first
+                if let homeController = keyWindow?.rootViewController as? HomeController {
+                    homeController.configureUI()
+                }
+            }
+            
+            // Because in case of No Login we are presenting Login screen over Home screen. So, when user logs in successfully we dismiss the Login screen. Similar logic with Sign up screen.
+            self.dismiss(animated: true, completion: nil)
         }
     }
 }
