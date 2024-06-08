@@ -13,6 +13,15 @@ private let reuseIdentifier = "LocationCell"
 private let annotationIdentifier = "DriverAnnotation"
 
 
+private enum ActionBtnConfiguration {
+    case sideMenu
+    case dismissActionView
+    
+    init() {
+        self = .sideMenu  // Initially 'actionButton' functionality will be to open Side Menu
+    }
+}
+
 
 class HomeController: UIViewController {
     // MARK: - Properties
@@ -22,6 +31,16 @@ class HomeController: UIViewController {
     private let locationInputView = LocationInputView()
     private let tableView = UITableView()
     private final let locationInputViewHeight: CGFloat = 200
+    private var searchResults = [MKPlacemark]()
+    private var actionBtnConfig = ActionBtnConfiguration()
+    
+    private let actionButton: UIButton = {
+        let btn = UIButton(type: .system)
+        btn.setImage(UIImage(named: "menu")?.withRenderingMode(.alwaysOriginal), for: .normal)
+        btn.addTarget(self, action: #selector(actionBtnTapped), for: .touchUpInside)
+        return btn
+    }()
+    
     private var user: User? {
         didSet {
             locationInputView.user = user
@@ -32,12 +51,8 @@ class HomeController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        view.backgroundColor = .blue
         checkIfUserLoggedIn()
-        enableLocationServices()
-        fetchUserData()
-        fetchDrivers()
-//        signOut()
+        enableLocationServices()        
     }
     
     
@@ -50,7 +65,7 @@ class HomeController: UIViewController {
             }
         }
         else {
-            configureUI()
+            configure()
         }
     }
     
@@ -68,14 +83,25 @@ class HomeController: UIViewController {
     }
     
     
+    func configure() {
+        configureUI()
+        fetchUserData()
+        fetchDrivers()
+    }
+    
     func configureUI() {
         configureMapView()
         
+        view.addSubview(actionButton)
         // Set LocationInputView constraints in Home VC
         view.addSubview(inputActivationView)
+        
+        actionButton.setConstraints(top: view.safeAreaLayoutGuide.topAnchor, left: view.leftAnchor,
+                                    paddingTop: 16, paddingLeft: 20, width: 30, height: 30)
+        
         inputActivationView.centerX(inView: view)
         inputActivationView.setDimensions(height: 50, width: view.frame.width - 64)
-        inputActivationView.setConstraints(top: view.safeAreaLayoutGuide.topAnchor, paddingTop: 32)
+        inputActivationView.setConstraints(top: actionButton.bottomAnchor, paddingTop: 32)
         inputActivationView.delegate = self
         inputActivationView.alpha = 0
         
@@ -83,7 +109,6 @@ class HomeController: UIViewController {
         UIView.animate(withDuration: 2) {
             self.inputActivationView.alpha = 1
         }
-        
         configureTableView()
     }
     
@@ -126,6 +151,37 @@ class HomeController: UIViewController {
         view.addSubview(tableView)
     }
     
+    
+    fileprivate func configureActionBtn(config: ActionBtnConfiguration) {
+        switch config {
+        case .sideMenu:
+            self.actionButton.setImage(UIImage(named: "menu")?.withRenderingMode(.alwaysOriginal), for: .normal)
+            self.actionBtnConfig = .sideMenu
+        case .dismissActionView:
+            actionButton.setImage(UIImage(named: "arrow_back")?.withRenderingMode(.alwaysOriginal), for: .normal)
+            actionBtnConfig = .dismissActionView
+        }
+    }
+    
+    
+    @objc func actionBtnTapped() {
+        switch actionBtnConfig {
+        case .sideMenu:
+            print("DEBUG: Handle Side Menu")
+        case .dismissActionView:
+            mapView.annotations.forEach { (annotation) in
+                if let annotation = annotation as? MKPointAnnotation {
+                    mapView.removeAnnotation(annotation)
+                }
+            }
+            UIView.animate(withDuration: 0.3) {
+                self.inputActivationView.alpha = 1
+                self.configureActionBtn(config: .sideMenu)
+            }
+        }
+    }
+    
+    
     // MARK: - Firebase API
     func fetchUserData() {
         guard let currentUid = Auth.auth().currentUser?.uid else { return }
@@ -158,6 +214,15 @@ class HomeController: UIViewController {
                 self.mapView.addAnnotation(annotation)
             }
         }
+    }
+    
+    
+    func dismissLocationView(completion: ((Bool) -> Void)? = nil) {
+        UIView.animate(withDuration: 0.3, animations: {
+            self.locationInputView.alpha = 0
+            self.tableView.frame.origin.y = self.view.frame.height // this will hide the tableView
+            self.locationInputView.removeFromSuperview()
+        }, completion: completion)
     }
 }
 
@@ -214,6 +279,31 @@ extension HomeController: MKMapViewDelegate {
 
 
 
+
+private extension HomeController {
+    
+    func searchBy(naturalLanguageQuery: String, completion: @escaping([MKPlacemark]) -> Void) {
+        var results = [MKPlacemark]()
+        
+        let request = MKLocalSearch.Request()  // Local search based on User's location
+        request.region = mapView.region
+        request.naturalLanguageQuery = naturalLanguageQuery
+        
+        let search = MKLocalSearch(request: request)
+        search.start { (response, error) in
+            guard let response = response else { return }
+            
+            response.mapItems.forEach ({ (item) in
+                results.append(item.placemark)
+            })
+            completion(results)
+        }
+    }
+}
+
+
+
+
 extension HomeController: LocationInputActivationViewDelegate {
     
     func presentLocationInputView() {
@@ -227,13 +317,19 @@ extension HomeController: LocationInputActivationViewDelegate {
 
 extension HomeController: LocationInputViewDelegate {
     
+    // This delegate method gets called when user clicks on Back button
     func dismissLocationInputView() {
-        UIView.animate(withDuration: 0.3) {
-            self.locationInputView.alpha = 0
-            self.tableView.frame.origin.y = self.view.frame.height // this will hide the tableView
-        } completion: { _ in
-            self.locationInputView.removeFromSuperview()
-            self.inputActivationView.alpha = 1
+        dismissLocationView { _ in
+            UIView.animate(withDuration: 0.3, animations: {
+                self.inputActivationView.alpha = 1
+            })
+        }
+    }
+    
+    func executeSearch(query: String) {
+        searchBy(naturalLanguageQuery: query) { (placemarks) in
+            self.searchResults = placemarks
+            self.tableView.reloadData()
         }
     }
 }
@@ -250,16 +346,36 @@ extension HomeController: UITableViewDelegate, UITableViewDataSource {
     }
     
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return section == 0 ? 2 : 5
+        return section == 0 ? 2 : searchResults.count
     }
     
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: reuseIdentifier, for: indexPath) as! LocationCell
+        
+        if indexPath.section == 1 {
+            cell.placemark = searchResults[indexPath.row]
+        }
+        
         return cell
     }
     
     func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
         return "Test"
+    }
+    
+    
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        let selectedPlacemark = searchResults[indexPath.row]
+        
+        // When user selects a row from a tableView results, actionButton functionality will be to dismiss
+        configureActionBtn(config: .dismissActionView)
+        
+        dismissLocationView { _ in
+            let annotation = MKPointAnnotation()
+            annotation.coordinate = selectedPlacemark.coordinate
+            self.mapView.addAnnotation(annotation)
+            self.mapView.selectAnnotation(annotation, animated: true)
+        }
     }
 }

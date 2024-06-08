@@ -89,7 +89,7 @@ class LoginController: UIViewController {
             DispatchQueue.main.async {
                 let keyWindow = UIApplication.shared.windows.filter {$0.isKeyWindow}.first
                 if let homeController = keyWindow?.rootViewController as? HomeController {
-                    homeController.configureUI()
+                    homeController.configure()
                 }
             }
             
