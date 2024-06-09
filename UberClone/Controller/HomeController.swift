@@ -29,8 +29,10 @@ class HomeController: UIViewController {
     private let locationManager = LocationsHandler.shared.locationManager
     private let inputActivationView = LocationInputActivationView()
     private let locationInputView = LocationInputView()
+    private let rideActionView = RideActionView()
     private let tableView = UITableView()
     private final let locationInputViewHeight: CGFloat = 200
+    private final let rideActionViewHeight: CGFloat = 300
     private var searchResults = [MKPlacemark]()
     private var actionBtnConfig = ActionBtnConfiguration()
     private var route: MKRoute?
@@ -92,10 +94,10 @@ class HomeController: UIViewController {
     
     func configureUI() {
         configureMapView()
+        configureRideActionView()
         
-        view.addSubview(actionButton)
-        // Set LocationInputView constraints in Home VC
         view.addSubview(inputActivationView)
+        view.addSubview(actionButton)
         
         actionButton.setConstraints(top: view.safeAreaLayoutGuide.topAnchor, left: view.leftAnchor,
                                     paddingTop: 16, paddingLeft: 20, width: 30, height: 30)
@@ -139,6 +141,14 @@ class HomeController: UIViewController {
     }
     
     
+    func configureRideActionView() {
+        view.addSubview(rideActionView)
+        
+        print("view.frame.height: \(view.frame.height)")
+        rideActionView.frame = CGRect(x: 0, y: view.frame.height, width: view.frame.width, height: rideActionViewHeight)
+    }
+    
+    
     func configureTableView() {
         tableView.delegate = self
         tableView.dataSource = self
@@ -175,6 +185,8 @@ class HomeController: UIViewController {
             UIView.animate(withDuration: 0.3) {
                 self.inputActivationView.alpha = 1
                 self.configureActionBtn(config: .sideMenu)
+                // Hide the Ride action view from where user can confirm the ride
+                self.presentRideActionView(shouldShow: false)
             }
             // zooms out and show all the annotations
             mapView.showAnnotations(mapView.annotations, animated: true)
@@ -223,6 +235,22 @@ class HomeController: UIViewController {
             self.tableView.frame.origin.y = self.view.frame.height // this will hide the tableView
             self.locationInputView.removeFromSuperview()
         }, completion: completion)
+    }
+    
+    
+    func presentRideActionView(shouldShow: Bool, destination: MKPlacemark? = nil) {
+        if shouldShow {
+            guard let destination = destination else { return }
+            self.rideActionView.destination = destination
+            
+            UIView.animate(withDuration: 0.3) {
+                self.rideActionView.frame.origin.y = self.view.frame.height - self.rideActionViewHeight
+            }
+        } else {
+            UIView.animate(withDuration: 0.3) {
+                self.rideActionView.frame.origin.y = self.view.frame.height
+            }
+        }
     }
 }
 
@@ -425,7 +453,14 @@ extension HomeController: UITableViewDelegate, UITableViewDataSource {
             // filter out the driver annotations because we want to show user location annotation and point annotatiob
             let annotations = self.mapView.annotations.filter( { !$0.isKind(of: DriverAnnotation.self)})
             
-            self.mapView.showAnnotations(annotations, animated: true)
+//            self.mapView.showAnnotations(annotations, animated: true)
+            self.mapView.zoomToFit(annotations: annotations)
+            
+            
+            // Show the Ride action view from where user can confirm the ride
+            // Pass the selected destination as well to show in the Ride Action View
+            self.presentRideActionView(shouldShow: true, destination: selectedPlacemark)
+            
         }
     }
 }
