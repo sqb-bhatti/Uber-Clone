@@ -33,6 +33,7 @@ class HomeController: UIViewController {
     private final let locationInputViewHeight: CGFloat = 200
     private var searchResults = [MKPlacemark]()
     private var actionBtnConfig = ActionBtnConfiguration()
+    private var route: MKRoute?
     
     private let actionButton: UIButton = {
         let btn = UIButton(type: .system)
@@ -169,15 +170,14 @@ class HomeController: UIViewController {
         case .sideMenu:
             print("DEBUG: Handle Side Menu")
         case .dismissActionView:
-            mapView.annotations.forEach { (annotation) in
-                if let annotation = annotation as? MKPointAnnotation {
-                    mapView.removeAnnotation(annotation)
-                }
-            }
+            removeAnnotationsAndOverlays()
+            
             UIView.animate(withDuration: 0.3) {
                 self.inputActivationView.alpha = 1
                 self.configureActionBtn(config: .sideMenu)
             }
+            // zooms out and show all the annotations
+            mapView.showAnnotations(mapView.annotations, animated: true)
         }
     }
     
@@ -269,8 +269,18 @@ extension HomeController: MKMapViewDelegate {
             view.image = UIImage(named: "chevron-sign-to-right")
             return view
         }
-        
         return nil
+    }
+    
+    func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
+        if let route = self.route {
+            let polyline = route.polyline
+            let lineRenderer = MKPolylineRenderer(polyline: polyline)
+            lineRenderer.strokeColor = .mainBlueTint
+            lineRenderer.lineWidth = 4
+            return lineRenderer
+        }
+        return MKOverlayRenderer()
     }
 }
 
@@ -297,6 +307,36 @@ private extension HomeController {
                 results.append(item.placemark)
             })
             completion(results)
+        }
+    }
+    
+    
+    // generate a geometric route from source to destination
+    func generatePolyline(toDestination destination: MKMapItem) {
+        let request = MKDirections.Request()
+        request.source = MKMapItem.forCurrentLocation()
+        request.destination = destination
+        request.transportType = .automobile
+        
+        let directionRequest = MKDirections(request: request)
+        directionRequest.calculate { response, error in
+            guard let response = response else { return }
+            
+            self.route = response.routes[0]
+            guard let polyline = self.route?.polyline else { return }
+            self.mapView.addOverlay(polyline)
+        }
+    }
+    
+    func removeAnnotationsAndOverlays() {
+        mapView.annotations.forEach { (annotation) in
+            if let annotation = annotation as? MKPointAnnotation {
+                mapView.removeAnnotation(annotation)
+            }
+        }
+        
+        if mapView.overlays.count > 0 {
+            mapView.removeOverlay(mapView.overlays[0])
         }
     }
 }
@@ -367,15 +407,25 @@ extension HomeController: UITableViewDelegate, UITableViewDataSource {
     
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         let selectedPlacemark = searchResults[indexPath.row]
+        //var annotations = [MKAnnotation]()
         
         // When user selects a row from a tableView results, actionButton functionality will be to dismiss
         configureActionBtn(config: .dismissActionView)
+        
+        let destination = MKMapItem(placemark: selectedPlacemark)
+        generatePolyline(toDestination: destination)
         
         dismissLocationView { _ in
             let annotation = MKPointAnnotation()
             annotation.coordinate = selectedPlacemark.coordinate
             self.mapView.addAnnotation(annotation)
             self.mapView.selectAnnotation(annotation, animated: true)
+            
+            // zooms in to show the selected place annotation
+            // filter out the driver annotations because we want to show user location annotation and point annotatiob
+            let annotations = self.mapView.annotations.filter( { !$0.isKind(of: DriverAnnotation.self)})
+            
+            self.mapView.showAnnotations(annotations, animated: true)
         }
     }
 }
