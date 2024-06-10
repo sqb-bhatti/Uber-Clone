@@ -20,6 +20,7 @@
 		D40FCE5E2C0F0824008ABA2D /* User.swift in Sources */ = {isa = PBXBuildFile; fileRef = D40FCE5D2C0F0824008ABA2D /* User.swift */; };
 		D40FCE602C0F4DE7008ABA2D /* LocationsHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = D40FCE5F2C0F4DE7008ABA2D /* LocationsHandler.swift */; };
 		D40FCE622C0F603A008ABA2D /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = D40FCE612C0F603A008ABA2D /* GoogleService-Info.plist */; };
+		D48A759C2C16BD71004FE605 /* Trip.swift in Sources */ = {isa = PBXBuildFile; fileRef = D48A759B2C16BD71004FE605 /* Trip.swift */; };
 		D4A83CC02C083BB5009ABBE8 /* Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4A83CBF2C083BB5009ABBE8 /* Extensions.swift */; };
 		D4A83CC22C098F82009ABBE8 /* SignUpController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4A83CC12C098F82009ABBE8 /* SignUpController.swift */; };
 		D4A8C1762AC4874200C66745 /* LoginController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4A8C1752AC4874200C66745 /* LoginController.swift */; };
@@ -47,6 +48,7 @@
 		D40FCE5D2C0F0824008ABA2D /* User.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = User.swift; sourceTree = "<group>"; };
 		D40FCE5F2C0F4DE7008ABA2D /* LocationsHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationsHandler.swift; sourceTree = "<group>"; };
 		D40FCE612C0F603A008ABA2D /* GoogleService-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
+		D48A759B2C16BD71004FE605 /* Trip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Trip.swift; sourceTree = "<group>"; };
 		D4A83CBF2C083BB5009ABBE8 /* Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Extensions.swift; sourceTree = "<group>"; };
 		D4A83CC12C098F82009ABBE8 /* SignUpController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignUpController.swift; sourceTree = "<group>"; };
 		D4A8C1752AC4874200C66745 /* LoginController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginController.swift; sourceTree = "<group>"; };
@@ -118,6 +120,7 @@
 			children = (
 				D40FCE5D2C0F0824008ABA2D /* User.swift */,
 				D4BC35AE2C11B5AE00D4F806 /* DriverAnnotation.swift */,
+				D48A759B2C16BD71004FE605 /* Trip.swift */,
 			);
 			path = Model;
 			sourceTree = "<group>";
@@ -290,6 +293,7 @@
 				D4F6BB1A2C0A17B600F562D1 /* AuthButton.swift in Sources */,
 				D4F6BB222C0B233700F562D1 /* HomeController.swift in Sources */,
 				D40FCE582C0CD3AF008ABA2D /* LocationInputView.swift in Sources */,
+				D48A759C2C16BD71004FE605 /* Trip.swift in Sources */,
 				D4BC35AF2C11B5AE00D4F806 /* DriverAnnotation.swift in Sources */,
 				D402F9B52AC478E500738E84 /* AppDelegate.swift in Sources */,
 				D4A8C1762AC4874200C66745 /* LoginController.swift in Sources */,

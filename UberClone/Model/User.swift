@@ -8,11 +8,18 @@ import Foundation
 import CoreLocation
 
 
+enum AccountType: Int {
+    case passenger
+    case driver
+}
+
+
+
 struct User {
     let uid: String
     let fullName: String
     let email: String
-    let accountType: Int
+    var accountType: AccountType!
     var location: CLLocation?
     
     // uid is passed as a separate parameter because in Firebase 'uid' is not a part of dictionary
@@ -20,6 +27,9 @@ struct User {
         self.uid = uid
         self.fullName = dictionary["fullName"] as? String ?? ""
         self.email = dictionary["email"] as? String ?? ""
-        self.accountType = dictionary["accountType"] as? Int ?? 0
+        
+        if let index = dictionary["accountType"] as? Int {
+            self.accountType = AccountType(rawValue: index)
+        }
     }
 }

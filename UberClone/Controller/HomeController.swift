@@ -47,6 +47,10 @@ class HomeController: UIViewController {
     private var user: User? {
         didSet {
             locationInputView.user = user
+            if user?.accountType == .passenger {
+                fetchDrivers()
+                configureLocationInputActivationView()
+            }
         }
     }
     
@@ -55,7 +59,8 @@ class HomeController: UIViewController {
         super.viewDidLoad()
         
         checkIfUserLoggedIn()
-        enableLocationServices()        
+        enableLocationServices()
+//        signOut()
     }
     
     
@@ -89,18 +94,23 @@ class HomeController: UIViewController {
     func configure() {
         configureUI()
         fetchUserData()
-        fetchDrivers()
     }
     
     func configureUI() {
         configureMapView()
         configureRideActionView()
         
-        view.addSubview(inputActivationView)
         view.addSubview(actionButton)
         
         actionButton.setConstraints(top: view.safeAreaLayoutGuide.topAnchor, left: view.leftAnchor,
                                     paddingTop: 16, paddingLeft: 20, width: 30, height: 30)
+        
+        configureTableView()
+    }
+    
+    
+    func configureLocationInputActivationView() {
+        view.addSubview(inputActivationView)
         
         inputActivationView.centerX(inView: view)
         inputActivationView.setDimensions(height: 50, width: view.frame.width - 64)
@@ -112,7 +122,6 @@ class HomeController: UIViewController {
         UIView.animate(withDuration: 2) {
             self.inputActivationView.alpha = 1
         }
-        configureTableView()
     }
     
     func configureMapView() {
@@ -143,6 +152,8 @@ class HomeController: UIViewController {
     
     func configureRideActionView() {
         view.addSubview(rideActionView)
+        
+        rideActionView.delegate = self
         
         print("view.frame.height: \(view.frame.height)")
         rideActionView.frame = CGRect(x: 0, y: view.frame.height, width: view.frame.width, height: rideActionViewHeight)
@@ -461,6 +472,27 @@ extension HomeController: UITableViewDelegate, UITableViewDataSource {
             // Pass the selected destination as well to show in the Ride Action View
             self.presentRideActionView(shouldShow: true, destination: selectedPlacemark)
             
+        }
+    }
+}
+
+
+
+
+
+extension HomeController: RideActionViewDelegate {
+    
+    func uploadTrip(_ view: RideActionView) {
+        guard let pickupCoordinates = locationManager?.location?.coordinate else { return }
+        guard let destinationCoordinates = view.destination?.coordinate else { return }
+        
+        Service.shared.uploadTrip(pickupCoordinates, destinationCoordinates) { (err, ref) in
+            if let error = err {
+                print("DEBUG: Failed to upload trip with \(error)")
+                return
+            }
+            
+            print("DEBUG: Did upload trip successfully")
         }
     }
 }

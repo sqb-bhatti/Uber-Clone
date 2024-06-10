@@ -7,6 +7,16 @@
 import UIKit
 import MapKit
 
+
+
+protocol RideActionViewDelegate: AnyObject {
+    func uploadTrip(_ view: RideActionView)
+}
+
+
+
+
+
 class RideActionView: UIView {
     
     override init(frame: CGRect) {
@@ -53,6 +63,9 @@ class RideActionView: UIView {
     
     
     // MARK: - Properties
+    weak var delegate: RideActionViewDelegate?
+    
+    
     var destination: MKPlacemark? {
         didSet {
             titleLabel.text = destination?.name
@@ -117,5 +130,6 @@ class RideActionView: UIView {
     // MARK: - Selectors
     @objc func confirmBtnPressed() {
         print("DEBUG: Confirm btn pressed")
+        delegate?.uploadTrip(self)
     }
 }
