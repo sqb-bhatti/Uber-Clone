@@ -50,7 +50,20 @@ class HomeController: UIViewController {
             if user?.accountType == .passenger {
                 fetchDrivers()
                 configureLocationInputActivationView()
+            } else {
+                observeTrips()
             }
+        }
+    }
+    
+    
+    private var trip: Trip? {
+        didSet {
+            guard let trip = trip else { return }
+            let controller = PickupController(trip: trip)
+            controller.delegate = self
+            controller.modalPresentationStyle = .fullScreen
+            self.present(controller, animated: true, completion: nil)
         }
     }
     
@@ -63,6 +76,13 @@ class HomeController: UIViewController {
 //        signOut()
     }
     
+    
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        
+        guard let trip = trip else { return }
+        print("Trip state is \(trip.state)")
+    }
     
     func checkIfUserLoggedIn() {
         if Auth.auth().currentUser?.uid == nil {
@@ -239,6 +259,12 @@ class HomeController: UIViewController {
         }
     }
     
+    
+    func observeTrips() {
+        Service.shared.observeTrips { (trip) in
+            self.trip = trip
+        }
+    }
     
     func dismissLocationView(completion: ((Bool) -> Void)? = nil) {
         UIView.animate(withDuration: 0.3, animations: {
@@ -479,7 +505,7 @@ extension HomeController: UITableViewDelegate, UITableViewDataSource {
 
 
 
-
+// Mark - RideActionViewDelegate
 extension HomeController: RideActionViewDelegate {
     
     func uploadTrip(_ view: RideActionView) {
@@ -494,5 +520,19 @@ extension HomeController: RideActionViewDelegate {
             
             print("DEBUG: Did upload trip successfully")
         }
+    }
+}
+
+
+
+
+
+
+// Mark - PickupControllerDelegate
+extension HomeController: PickupControllerDelegate {
+    
+    func didAcceptTrip(_ trip: Trip) {
+        self.trip?.state = .accepted
+        self.dismiss(animated: true, completion: nil)
     }
 }

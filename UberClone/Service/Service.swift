@@ -56,4 +56,25 @@ struct Service {
                       "state": TripState.requested.rawValue] as [String : Any]
         REF_TRIPS.child(uid).updateChildValues(values, withCompletionBlock: completion)
     }
+    
+    
+    // Observe whenever a new trip is added for the driver
+    func observeTrips(completion: @escaping(Trip) -> Void) {
+        REF_TRIPS.observe(.childAdded) { (snapshot) in
+            guard let dictionary = snapshot.value as? [String: Any] else { return }
+            
+            let uid = snapshot.key
+            let trip = Trip(passengerUid: uid, dictionary: dictionary)
+            completion(trip)
+        }
+    }
+    
+    
+    func acceptTrip(trip: Trip, completion: @escaping(Error?, DatabaseReference) -> Void) {
+        // Add the driver uid to this trip and the change the state of trip to ACCEPTED
+        guard let uid = Auth.auth().currentUser?.uid else { return }
+        let values = ["driverUid": uid, "state": TripState.accepted.rawValue] as [String : Any]
+        
+        REF_TRIPS.child(trip.passengerUid).updateChildValues(values, withCompletionBlock: completion)
+    }
 }
