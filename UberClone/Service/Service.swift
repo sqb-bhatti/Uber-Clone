@@ -58,7 +58,7 @@ struct Service {
     }
     
     
-    // Observe whenever a new trip is added for the driver
+    // Observe whenever a new trip is added for the driver. Driver will observer all the trips
     func observeTrips(completion: @escaping(Trip) -> Void) {
         REF_TRIPS.observe(.childAdded) { (snapshot) in
             guard let dictionary = snapshot.value as? [String: Any] else { return }
@@ -76,5 +76,19 @@ struct Service {
         let values = ["driverUid": uid, "state": TripState.accepted.rawValue] as [String : Any]
         
         REF_TRIPS.child(trip.passengerUid).updateChildValues(values, withCompletionBlock: completion)
+    }
+    
+    
+    // Passenger can observe what is going on with their current trip
+    func observeCurrentTrip(completion: @escaping(Trip) -> Void) {
+        guard let uid = Auth.auth().currentUser?.uid else { return }
+        
+        REF_TRIPS.child(uid).observe(.value) { (snapshot) in
+            guard let dict = snapshot.value as? [String: Any] else { return }
+            
+            let uid = snapshot.key
+            let trip = Trip(passengerUid: uid, dictionary: dict)
+            completion(trip)
+        }
     }
 }
