@@ -15,7 +15,7 @@ private let annotationIdentifier = "DriverAnnotation"
 
 private enum ActionBtnConfiguration {
     case sideMenu
-    case dismissActionView
+    case dismissRideRequestView
     
     init() {
         self = .sideMenu  // Initially 'actionButton' functionality will be to open Side Menu
@@ -29,10 +29,10 @@ class HomeController: UIViewController {
     private let locationManager = LocationsHandler.shared.locationManager
     private let inputActivationView = LocationInputActivationView()
     private let locationInputView = LocationInputView()
-    private let rideActionView = RideActionView()
+    private let rideRequestView = RideRequestView()
     private let tableView = UITableView()
     private final let locationInputViewHeight: CGFloat = 200
-    private final let rideActionViewHeight: CGFloat = 300
+    private final let rideRequestViewHeight: CGFloat = 300
     private var searchResults = [MKPlacemark]()
     private var actionBtnConfig = ActionBtnConfiguration()
     private var route: MKRoute?
@@ -124,7 +124,7 @@ class HomeController: UIViewController {
     
     func configureUI() {
         configureMapView()
-        configureRideActionView()
+        configureRideRequestView()
         
         view.addSubview(actionButton)
         
@@ -176,13 +176,13 @@ class HomeController: UIViewController {
     }
     
     
-    func configureRideActionView() {
-        view.addSubview(rideActionView)
+    func configureRideRequestView() {
+        view.addSubview(rideRequestView)
         
-        rideActionView.delegate = self
+        rideRequestView.delegate = self
         
         print("view.frame.height: \(view.frame.height)")
-        rideActionView.frame = CGRect(x: 0, y: view.frame.height, width: view.frame.width, height: rideActionViewHeight)
+        rideRequestView.frame = CGRect(x: 0, y: view.frame.height, width: view.frame.width, height: rideRequestViewHeight)
     }
     
     
@@ -205,9 +205,9 @@ class HomeController: UIViewController {
         case .sideMenu:
             self.actionButton.setImage(UIImage(named: "menu")?.withRenderingMode(.alwaysOriginal), for: .normal)
             self.actionBtnConfig = .sideMenu
-        case .dismissActionView:
+        case .dismissRideRequestView:
             actionButton.setImage(UIImage(named: "arrow_back")?.withRenderingMode(.alwaysOriginal), for: .normal)
-            actionBtnConfig = .dismissActionView
+            actionBtnConfig = .dismissRideRequestView
         }
     }
     
@@ -216,14 +216,14 @@ class HomeController: UIViewController {
         switch actionBtnConfig {
         case .sideMenu:
             print("DEBUG: Handle Side Menu")
-        case .dismissActionView:
+        case .dismissRideRequestView:
             removeAnnotationsAndOverlays()
             
             UIView.animate(withDuration: 0.3) {
                 self.inputActivationView.alpha = 1
                 self.configureActionBtn(config: .sideMenu)
                 // Hide the Ride action view from where user can confirm the ride
-                self.presentRideActionView(shouldShow: false)
+                self.animateRideRequestView(shouldShow: false)
             }
             // zooms out and show all the annotations
             mapView.showAnnotations(mapView.annotations, animated: true)
@@ -273,12 +273,19 @@ class HomeController: UIViewController {
     }
     
     
+    // When the trip gets accepted by a driver, we will fetch the driver and it's data from the database
     func observeCurrentTrip() {
         Service.shared.observeCurrentTrip { trip in
             self.trip = trip
             
             if trip.state == .accepted {
                 self.shouldPresentLoadingView(false)
+                
+                //get the User
+                guard let driverUid = trip.driverUid else { return }
+                Service.shared.fetchUserData(uid: driverUid) { (driver) in
+                    self.animateRideRequestView(shouldShow: true, config: .tripAccepted, user: driver)
+                }
             }
         }
     }
@@ -293,17 +300,27 @@ class HomeController: UIViewController {
     }
     
     
-    func presentRideActionView(shouldShow: Bool, destination: MKPlacemark? = nil) {
+    func animateRideRequestView(shouldShow: Bool, destination: MKPlacemark? = nil, 
+                                config: RideRequestViewConfiguration? = .requestRide, user: User? = nil) {
+        UIView.animate(withDuration: 0.3) {
+            self.rideRequestView.frame.origin.y = self.view.frame.height - self.rideRequestViewHeight
+        }
+        
         if shouldShow {
-            guard let destination = destination else { return }
-            self.rideActionView.destination = destination
+            guard let config = config else { return }
             
-            UIView.animate(withDuration: 0.3) {
-                self.rideActionView.frame.origin.y = self.view.frame.height - self.rideActionViewHeight
+            if let destination = destination {
+                self.rideRequestView.destination = destination
             }
+            
+            if let user = user {
+                self.rideRequestView.user = user
+            }
+            
+            rideRequestView.configureUI(withConfig: config)
         } else {
             UIView.animate(withDuration: 0.3) {
-                self.rideActionView.frame.origin.y = self.view.frame.height
+                self.rideRequestView.frame.origin.y = self.view.frame.height
             }
         }
     }
@@ -493,7 +510,7 @@ extension HomeController: UITableViewDelegate, UITableViewDataSource {
         //var annotations = [MKAnnotation]()
         
         // When user selects a row from a tableView results, actionButton functionality will be to dismiss
-        configureActionBtn(config: .dismissActionView)
+        configureActionBtn(config: .dismissRideRequestView)
         
         let destination = MKMapItem(placemark: selectedPlacemark)
         generatePolyline(toDestination: destination)
@@ -514,7 +531,7 @@ extension HomeController: UITableViewDelegate, UITableViewDataSource {
             
             // Show the Ride action view from where user can confirm the ride
             // Pass the selected destination as well to show in the Ride Action View
-            self.presentRideActionView(shouldShow: true, destination: selectedPlacemark)
+            self.animateRideRequestView(shouldShow: true, destination: selectedPlacemark, config: .requestRide)
             
         }
     }
@@ -523,10 +540,10 @@ extension HomeController: UITableViewDelegate, UITableViewDataSource {
 
 
 
-// Mark - RideActionViewDelegate
-extension HomeController: RideActionViewDelegate {
+// Mark - RideRequestViewDelegate
+extension HomeController: RideRequestViewDelegate {
     
-    func uploadTrip(_ view: RideActionView) {
+    func uploadTrip(_ view: RideRequestView) {
         guard let pickupCoordinates = locationManager?.location?.coordinate else { return }
         guard let destinationCoordinates = view.destination?.coordinate else { return }
         
@@ -540,7 +557,7 @@ extension HomeController: RideActionViewDelegate {
             
             UIView.animate(withDuration: 0.3) {
                 //Dismiss Ride Action View
-                self.rideActionView.frame.origin.y = self.view.frame.height
+                self.rideRequestView.frame.origin.y = self.view.frame.height
             }
         }
     }
@@ -555,7 +572,22 @@ extension HomeController: RideActionViewDelegate {
 extension HomeController: PickupControllerDelegate {
     
     func didAcceptTrip(_ trip: Trip) {
-        self.trip?.state = .accepted
-        self.dismiss(animated: true, completion: nil)
+        let anno = MKPointAnnotation()
+        anno.coordinate = trip.pickupCoordinates
+        mapView.addAnnotation(anno)
+        mapView.selectAnnotation(anno, animated: true)
+        
+        let placemark = MKPlacemark(coordinate: trip.pickupCoordinates)
+        let mapItem = MKMapItem(placemark: placemark)
+        generatePolyline(toDestination: mapItem)
+        
+        mapView.zoomToFit(annotations: mapView.annotations)
+        
+        self.dismiss(animated: true) {
+            Service.shared.fetchUserData(uid: trip.passengerUid) { (passenger) in
+                self.animateRideRequestView(shouldShow: true, destination: placemark, config: .tripAccepted, user: passenger)
+            }
+            
+        }
     }
 }
